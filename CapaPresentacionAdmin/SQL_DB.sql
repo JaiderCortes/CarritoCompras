@@ -1,0 +1,94 @@
+--CREATE DATABASE DB_CARRITO;
+GO
+USE DB_CARRITO;
+GO
+
+CREATE TABLE Categoria(
+	IdCategoria INTEGER PRIMARY KEY IDENTITY,
+	Descripcion NVARCHAR(100),
+	Activo BIT DEFAULT 1,
+	FechaRegistro DATETIME DEFAULT GETDATE()
+)
+
+GO
+
+CREATE TABLE Marca(
+	IdMarca INTEGER PRIMARY KEY IDENTITY,
+	Descripcion NVARCHAR(100),
+	Activo BIT DEFAULT 1,
+	FechaRegistro DATETIME DEFAULT GETDATE()
+)
+
+GO
+
+CREATE TABLE Producto(
+	IdProducto INTEGER PRIMARY KEY IDENTITY,
+	IdMarca INTEGER REFERENCES Marca(IdMarca),
+	IdCategoria INTEGER REFERENCES Categoria(IdCategoria),
+	Nombre NVARCHAR(500),
+	Descripcion NVARCHAR(500),
+	Precio DECIMAL(10, 2) DEFAULT 0,
+	Stock INTEGER,
+	RutaImagen NVARCHAR(100),
+	NombreImagen NVARCHAR(100),
+	Activo BIT DEFAULT 1,
+	FechaRegistro DATETIME DEFAULT GETDATE()
+)
+
+GO
+
+CREATE TABLE Cliente(
+	IdCliente INTEGER PRIMARY KEY IDENTITY,
+	Nombres NVARCHAR(100),
+	Apellidos NVARCHAR(100),
+	Correo NVARCHAR(100),
+	Clave NVARCHAR(150),
+	Reestablecer BIT DEFAULT 0,
+	FechaRegistro DATETIME DEFAULT GETDATE()
+)
+
+GO
+
+CREATE TABLE Carrito(
+	IdCarrito INTEGER PRIMARY KEY IDENTITY,
+	IdCliente INTEGER REFERENCES Cliente(IdCliente),
+	IdProducto INTEGER REFERENCES Producto(IdProducto),
+	Cantidad INTEGER
+)
+
+GO
+
+CREATE TABLE Venta(
+	IdVenta INTEGER PRIMARY KEY IDENTITY,
+	IdCliente INTEGER REFERENCES Cliente(IdCliente),
+	TotalProducto INTEGER,
+	MontoTotal DECIMAL(10, 2),
+	Contacto NVARCHAR(50),
+	Telefono NVARCHAR(50),
+	Direccion NVARCHAR(500),
+	IdTransaccion NVARCHAR(50),
+	FechaVenta DATETIME DEFAULT GETDATE()
+)
+
+GO
+
+CREATE TABLE Detalle_Venta(
+	IdDetalleVenta INTEGER PRIMARY KEY IDENTITY,
+	IdVenta INTEGER REFERENCES Venta(IdVenta),
+	IdProducto INTEGER REFERENCES Producto(IdProducto),
+	Cantidad INTEGER,
+	Total DECIMAL(10, 2)
+)
+
+GO
+
+CREATE TABLE Usuario(
+	IdUsuario INTEGER PRIMARY KEY IDENTITY,
+	Nombres NVARCHAR(100),
+	Apellidos NVARCHAR(100),
+	Correo NVARCHAR(100),
+	Clave NVARCHAR(150),
+	Reestablecer BIT DEFAULT 1,
+	Activo BIT DEFAULT 1,
+	FechaRegistro DATETIME DEFAULT GETDATE()
+)
