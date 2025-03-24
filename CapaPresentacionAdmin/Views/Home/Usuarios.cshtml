@@ -14,9 +14,9 @@
     <div class="card-body">
         <div class="row">
             <div class="col-12">
-                <button type="button" class="btn btn-success" onclick="AbrirModal()"><i class="fas fa-solid fa-user-plus"></i> Nuevo</button>
-                <div class="table-responsive mt-3">
-                    <table id="TbUsuarios" class="table table-hover table-striped table-bordered table-success border-secondary" style="width: 100%; text-align: center;">
+                <button type="button" class="btn btn-success" onclick="AbrirModal(null)"><i class="fas fa-solid fa-user-plus"></i> Nuevo</button>
+                <div class="table-responsive mt-3" style="padding-top: 5px;">
+                    <table id="TbUsuarios" class="table table-hover table-striped table-success" style="width: 100%; text-align: center;">
                         <thead class="table-dark">
                             <tr>
                                 <th>Nombres</th>
@@ -36,13 +36,14 @@
 </div>
 
 <!-- Modal -->
-<div class="modal fade" id="FormModal" tabindex="-1" aria-labelledby="ModalUsuario" aria-hidden="true">
+<div class="modal fade" id="FormModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="ModalUsuario" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-black text-white">
                 <h1 class="modal-title fs-5" id="ModalUsuario"><i class="fas fa-user"></i> Información Usuario</h1>
             </div>
             <div class="modal-body">
+                <input type="hidden" id="TxtIdUsuario" value="0">
                 <div class="row">
                     <div class="col">
                         <label for="InputNombres" class="form-label">Nombres:</label>
@@ -66,9 +67,16 @@
                         </select>
                     </div>
                 </div>
+                <div class="row mt-2">
+                    <div class="col-12">
+                        <div class="alert alert-danger align-items-center" role="alert" id="mensajeError">
+                            Mensaje del sistema.
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline-success"><i class="fas fa-save"></i> Guardar</button>
+                <button type="button" id="BntGuardar" class="btn btn-outline-success" onclick="GuardarUsuario()"><i class="fas fa-save"></i> Guardar</button>
                 <button type="button" class="btn btn-outline-danger" data-bs-dismiss="modal"><i class="fas fa-times-circle"></i> Cerrar</button>
             </div>
         </div>
@@ -78,13 +86,26 @@
 @section scripts{
     <script>
         var TbUsuarios;
+        var filaSeleccionada;
+
         TbUsuarios = $("#TbUsuarios").DataTable({
             responsive: true,
-            ordering: false,
+            ordering: true,
             ajax: {
                 url: '@Url.Action("ListarUsuarios", "Home")',
                 type: "GET",
-                dataType: "json"
+                dataType: "json",
+                dataSrc: function (json) {
+                    if (json.mensaje) { // Si el backend devuelve un mensaje de error
+                        swal("Error", "Ocurrió un error al cargar la lista de usuarios: " + json.mensaje, "error");
+                        return []; // Devuelve una tabla vacía para evitar errores en DataTables
+                    }
+                    return json.data; // Si todo sale bien, se retornan los datos de "data"".
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.error("Error en AJAX:", textStatus, errorThrown); // Muestra el error en la consola
+                    swal("Error", "No se pudo obtener la lista de usuarios. Intenta nuevamente.", "error");
+                }
             },
             columns: [
                 { "data":"Nombres"},
@@ -101,7 +122,7 @@
                 },
                 {
                     "defaultContent": '<button type="button" class="btn btn-primary btn-sm btn-edit"><i class="fas fa-edit"></i></button>' +
-                        '<button type="button" class="btn btn-danger btn-sm ms-2"><i class="fas fa-trash"></i></button>',
+                        '<button type="button" class="btn btn-danger btn-sm ms-2 btn-delete"><i class="fas fa-trash"></i></button>',
                     "orderable": false,
                     "searchable": false,
                     "width": "90px"
@@ -109,17 +130,131 @@
             ],
             language: {
                 url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
-            }
+            },
+            lengthMenu: [
+                [10, 25, 50, -1],
+                [10, 25, 50, 'Todos']
+            ]
 
         });
 
-        function AbrirModal() {
+        function AbrirModal(datosUsuario) {
+            $("#TxtIdUsuario").val(0)
+            $("#InputNombres").val("")
+            $("#InputApellidos").val("")
+            $("#InputCorreo").val("")
+            $("#SelectActivo").val(1);
+
+            $("#mensajeError").hide();
+            $("#mensajeError").text("");
+
+            //Valida los datos de usuario, si vienen.
+            if (datosUsuario != null) {
+                $("#TxtIdUsuario").val(datosUsuario.IdUsuario)
+                $("#InputNombres").val(datosUsuario.Nombres)
+                $("#InputApellidos").val(datosUsuario.Apellidos)
+                $("#InputCorreo").val(datosUsuario.Correo)
+                $("#SelectActivo").val(datosUsuario.Activo == true ? 1 : 0);
+            }
+
+            //Muestra la modal.
             $("#FormModal").modal("show");
         }
 
         $("#TbUsuarios tbody").on("click", ".btn-edit", function () {
-            alert("Hola!")
+            filaSeleccionada = $(this).closest("tr");
+            var datosUsuario = TbUsuarios.row(filaSeleccionada).data();
+
+            AbrirModal(datosUsuario);
         });
 
+        $("#TbUsuarios tbody").on("click", ".btn-delete", function () {
+            var usaurioSelect = $(this).closest("tr");
+            var datosUsuario = TbUsuarios.row(usaurioSelect).data();
+
+            swal({
+                title: "Atención",
+                text: `¿Confirma que dese eliminar el usuario ${datosUsuario.Nombres} ${datosUsuario.Apellidos}?`,
+                type: "warning",
+                showCancelButton: true,
+                confirmButtonClass: "btn-danger",
+                confirmButtonText: "Si",
+                cancelButtonText: "No",
+                closeOnConfirm: true
+            },
+            function () {
+                jQuery.ajax({
+                    url: '@Url.Action("EliminarUsuario", "Home")',
+                    type: "POST",
+                    data: JSON.stringify({ idUsuario: datosUsuario.IdUsuario }),
+                    dataType: "json",
+                    contentType: "application/json; charset=utf-8",
+                    success: function (data) {
+                        if (data.resultado) {
+                            TbUsuarios.row(usaurioSelect).remove().draw();
+                        } else {
+                            swal("Error", "Ocurrió un error al eliminar el usuario: " + data.mensaje, "error")
+                        }
+                    },
+                    error: function (error) {
+                        console.log(error);
+                    }
+                })
+            });
+
+        });
+
+        function GuardarUsuario() {
+            var Usuario = {
+                IdUsuario: $("#TxtIdUsuario").val(),
+                Nombres: $("#InputNombres").val(),
+                Apellidos: $("#InputApellidos").val(),
+                Correo: $("#InputCorreo").val(),
+                Activo: $("#SelectActivo").val() == 1 ? true : false,
+            }
+
+            jQuery.ajax({
+                url: '@Url.Action("GuardarUsuario", "Home")',
+                type: "POST",
+                data: JSON.stringify({ usuario : Usuario }),
+                dataType: "json",
+                contentType: "application/json; charset=utf-8",
+                success: function (data) {
+                    $("#BntGuardar").LoadingOverlay("hide");
+                    if (Usuario.IdUsuario == 0) {
+                        //Nuevo usuario
+                        if (data.resultado != 0) {
+                            Usuario.IdUsuario = data.resultado;
+                            TbUsuarios.row.add(Usuario).draw(false);
+                            $("#FormModal").modal("hide");
+                        } else {
+                            $("#mensajeError").show();
+                            $("#mensajeError").text(data.mensaje);
+                        }
+                    } else {
+                        //Editar usuario
+                        if (data.resultado) {
+                            TbUsuarios.row(filaSeleccionada).data(Usuario).draw(false);
+                            filaSeleccionada = null;
+                            $("#FormModal").modal("hide");
+                        } else {
+                            $("#mensajeError").show();
+                            $("#mensajeError").text("Ocurrió un error al guardar el usuario: " + data.mensaje);
+                        }
+                    }
+                },
+                error: function (error) {
+                    $("#BntGuardar").LoadingOverlay("hide");
+                    $("#mensajeError").show();
+                    $("#mensajeError").text("Error AJAX: " + error);
+                },
+                beforeSend: function () {
+                    $("#BntGuardar").LoadingOverlay("show", {
+                        text: "Procesando...",
+                        direction: "row",
+                    })
+                }
+            });
+        }
     </script>
 }
