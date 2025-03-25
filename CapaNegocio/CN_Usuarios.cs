@@ -55,18 +55,21 @@ namespace CapaNegocio
                     <p style=""margin-top: 20px; font-size: 14px; color: #777;"">&copy; 2025 Carrito de compras. Todos los derechos reservados.</p>
                 </div> ";
 
-                bool respuesta = CN_Recursos.EnviarCorreo(usuario.Correo, asunto, mensaje, out Mensaje);
-                if (respuesta)
+                usuario.Clave = CN_Recursos.ConvertirSHA256(clave);
+                resultado = cd_Usuarios.Registrar(usuario, out Mensaje);
+                if (resultado != 0)
                 {
-                    usuario.Clave = CN_Recursos.ConvertirSHA256(clave);
-                    resultado = cd_Usuarios.Registrar(usuario, out Mensaje);
+                    bool respuesta = CN_Recursos.EnviarCorreo(usuario.Correo, asunto, mensaje, out Mensaje);
+                    if (!respuesta)
+                    {
+                        Mensaje = $"Ocurrió un error al enviar el correo al usuario con la contraseña autogenerada. {Mensaje}";
+                        return 0;
+                    }
                 }
                 else
                 {
-                    Mensaje = $"Ocurrió un error al enviar el correo al usuario con la contraseña autogenerada. {Mensaje}";
-                    return 0;
+                    return resultado;
                 }
-
             }
             return resultado;
         }
