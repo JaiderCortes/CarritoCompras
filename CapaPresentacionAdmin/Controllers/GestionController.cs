@@ -63,5 +63,43 @@ namespace CapaPresentacionAdmin.Controllers
 
             return Json(new { resultado = resultado, mensaje = mensaje }, JsonRequestBehavior.AllowGet);
         }
+
+        [HttpGet]
+        public JsonResult ListarMarcas()
+        {
+            string mensaje = string.Empty;
+            List<Marca> marcas = new List<Marca>();
+            marcas = new CN_Marcas().Listar(out mensaje);
+            return Json(new { data = marcas, mensaje = mensaje }, JsonRequestBehavior.AllowGet);
+        }
+
+        [HttpPost]
+        public JsonResult GuardarMarca (Marca marca)
+        {
+            object resultado;
+            string mensaje = string.Empty;
+
+            if (marca.IdMarca == 0)
+            {
+                resultado = new CN_Marcas().Registrar(marca, out mensaje);
+            }
+            else
+            {
+                resultado = new CN_Marcas().Actualizar(marca, out mensaje);
+            }
+
+            return Json(new { resultado = resultado, mensaje = mensaje }, JsonRequestBehavior.AllowGet);
+        }
+
+        [HttpPost]
+        public JsonResult EliminarMarca(int idMarca)
+        {
+            bool resultado = false;
+            string mensaje = string.Empty;
+
+            resultado = new CN_Marcas().Eliminar(idMarca, out mensaje);
+
+            return Json(new { resultado = resultado, mensaje = mensaje }, JsonRequestBehavior.AllowGet);
+        }
     }
 }
